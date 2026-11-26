@@ -15,6 +15,12 @@
       </div>
     </header>
 
+    <ReconciliationDock
+      ref="reconciliationDock"
+      v-if="meta.key === 'differential_sql' || meta.key === 'privacy_budget'"
+      :module-key="meta.key"
+    />
+
     <div class="stat-row">
       <article v-for="item in stats" :key="item.label" class="stat-card">
         <span class="stat-label">{{ item.label }}</span>
@@ -50,6 +56,15 @@
           <td v-for="column in meta.fields" :key="column">{{ row[column] ?? '—' }}</td>
           <td>{{ row.status }}</td>
           <td class="row-actions">
+            <button
+              v-if="meta.key === 'differential_sql' || meta.key === 'privacy_budget'"
+              class="link"
+              type="button"
+              :data-testid="`row-reconcile-${row.id}`"
+              @click="openRowReconciliation"
+            >
+              对账单
+            </button>
             <button
               v-for="action in meta.actions"
               :key="action"
@@ -104,6 +119,7 @@ import {
   runAction as applyAction,
 } from '@/api/backend-service'
 import type { EntryRow } from '@/data/types'
+import ReconciliationDock from '@/components/ReconciliationDock.vue'
 
 const props = defineProps<{ moduleKey: string }>()
 const meta = moduleMeta(props.moduleKey)
@@ -115,6 +131,7 @@ const filterFields = meta.fields.slice(0, 3)
 const showCreate = ref(false)
 const creating = ref(false)
 const createValues = ref<Record<string, string>>({})
+const reconciliationDock = ref<InstanceType<typeof ReconciliationDock> | null>(null)
 const stats = computed(() => [
   { label: meta.metrics[0], value: total.value },
   { label: meta.metrics[1], value: rows.value.filter((row) => row.status === meta.statuses[1]).length },
@@ -163,6 +180,10 @@ async function submitCreate() {
   } finally {
     creating.value = false
   }
+}
+
+function openRowReconciliation() {
+  reconciliationDock.value?.openPanel(true)
 }
 
 async function runAction(action: string, row: EntryRow) {

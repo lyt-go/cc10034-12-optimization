@@ -69,6 +69,29 @@ npm run dev
 | 策略下发 | `deploy_policy` | 策略分发 | 分发编号、策略内容、目标节点 |
 | 异常检测 | `anomaly_detect` | 异常规则 | 规则编号、检测维度、检测算法 |
 
+## 预算对账
+
+差分查询页和隐私预算页共用服务端对账账本，入口为页面上的「预算对账」，也可直接访问
+`/reconciliation` 或 `/reconciliation/{对账单编号}?focus=difference` 回查历史版本。
+
+统一口径为：
+
+- 统一可用余额 = 初始额度 − 已确认执行回执扣费 − 待确认占用；
+- 待退款在真正退款成功前单独列示，不提前计入可用余额；
+- 对账单带符号明细合计 = 初始额度 − 已扣 + 待退款/已退款 − 待确认占用；
+- 同一 `execution_id` 或幂等键的确认/重试只产生一笔扣费；
+- 对账单创建后保存不可变快照，旧幂等键重试返回旧版本，新对账才包含之后完成的查询。
+
+核心接口：
+
+```text
+POST /api/reconciliation/setup                 # 初始化 1.0 / 0.3 / 0.1 场景
+POST /api/reconciliation/statements            # 创建/幂等重试对账单
+GET  /api/reconciliation/statements/{id}       # 回查历史快照
+GET  /api/reconciliation/statements/{id}/export
+POST /api/reconciliation/executions            # 执行回执确认，天然幂等
+```
+
 ## 约定
 
 - 全部模块共享`frontend/src/views/WorkbenchView.vue|tsx`和一套资源路由。
